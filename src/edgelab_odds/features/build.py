@@ -169,7 +169,7 @@ def build_features(replace: bool = False) -> int:
             )
             before = len(feat)
             feat = feat[~feat["fight_id"].isin(existing)]
-            if before - len(feat):
+            if before - len(feat) > 0:
                 log.info("Skipped %d already-built feature rows", before - len(feat))
 
         if feat.empty:

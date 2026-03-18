@@ -95,7 +95,7 @@ def table_exists(table: str, conn: duckdb.DuckDBPyConnection) -> bool:
 
 def row_count(table: str, conn: duckdb.DuckDBPyConnection) -> int:
     """Return the number of rows in *table*."""
-    return conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]  # type: ignore[index]
+    return conn.execute(f'SELECT count(*) FROM "{table}"').fetchone()[0]  # type: ignore[index]
 
 
 def query_df(sql: str, conn: duckdb.DuckDBPyConnection | None = None) -> pd.DataFrame:
@@ -137,11 +137,11 @@ def upsert_df(
         Number of rows written.
     """
     if if_exists == "replace":
-        conn.execute(f"DROP TABLE IF EXISTS {table}")
+        conn.execute(f'DROP TABLE IF EXISTS "{table}"')
 
     # Register the DataFrame as a temporary view so DuckDB can INSERT from it
     conn.register("_staging", df)
-    conn.execute(f"INSERT INTO {table} SELECT * FROM _staging")
+    conn.execute(f'INSERT INTO "{table}" SELECT * FROM _staging')
     conn.unregister("_staging")
 
     written = len(df)

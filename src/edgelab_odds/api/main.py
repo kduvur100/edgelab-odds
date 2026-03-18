@@ -270,8 +270,9 @@ async def fighter_profile(name: str):
                   .replace("red_age", "blue_age") \
                   .replace("red_wins_ko", "blue_wins_ko") \
                   .replace("red_wins_sub", "blue_wins_sub") \
-                  .replace("label = 1", "label = 0") \
-                  .replace("label = 0", "label = 1")
+                  .replace("label = 1", "__LABEL_WIN__") \
+                  .replace("label = 0", "label = 1") \
+                  .replace("__LABEL_WIN__", "label = 0")
         with conn_ctx(read_only=True) as conn:
             df = conn.execute(sql2, [name]).df()
 
@@ -363,8 +364,9 @@ def _stat_model_predict(fighter_a: str, fighter_b: str) -> dict:
                       .replace("red_current_win_streak", "blue_current_win_streak") \
                       .replace("red_wins_ko", "blue_wins_ko") \
                       .replace("red_fighter", "blue_fighter") \
-                      .replace("label=1", "label=0") \
-                      .replace("label=0", "label=1")
+                      .replace("label=1", "__LABEL_WIN__") \
+                      .replace("label=0", "label=1") \
+                      .replace("__LABEL_WIN__", "label=0")
             with conn_ctx(read_only=True) as conn:
                 df2 = conn.execute(sql2, [name]).df()
             row = df2.iloc[0].to_dict() if not df2.empty else row
