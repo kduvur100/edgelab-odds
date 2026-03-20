@@ -79,15 +79,27 @@ def _engineer(df: pd.DataFrame) -> pd.DataFrame:
                            - (df["blue_wins"].fillna(0) / blue_total)
     feat["experience_dif"] = red_total - blue_total
 
-    feat["win_streak_dif"]  = df["win_streak_dif"]
-    feat["lose_streak_dif"] = df["lose_streak_dif"]
+    # Compute streak diffs from raw corner columns (consistent with all other
+    # derived differentials; avoids relying on the CSV pre-computed values).
+    feat["win_streak_dif"]  = (
+        df["red_current_win_streak"].fillna(0) - df["blue_current_win_streak"].fillna(0)
+    )
+    feat["lose_streak_dif"] = (
+        df["red_current_lose_streak"].fillna(0) - df["blue_current_lose_streak"].fillna(0)
+    )
 
     # ── 4. Style — striking ───────────────────────────────────────────────────
     feat["sig_str_landed_dif"] = df["red_avg_sig_str_landed"] - df["blue_avg_sig_str_landed"]
     feat["sig_str_pct_dif"]    = df["red_avg_sig_str_pct"]    - df["blue_avg_sig_str_pct"]
 
-    # Absorbed strikes: use the opponent's landed average as a proxy
-    feat["sig_str_absorbed_est"] = df["blue_avg_sig_str_landed"] - df["red_avg_sig_str_landed"]
+    # Striking output quality: volume × accuracy per corner, then differential.
+    # This is independent of sig_str_landed_dif (volume only) and sig_str_pct_dif
+    # (accuracy only) — it captures *effective* output (high-volume AND accurate).
+    # Previously this slot held sig_str_absorbed_est = blue_landed - red_landed,
+    # which is just -sig_str_landed_dif (perfectly anti-correlated, redundant).
+    red_strike_score  = df["red_avg_sig_str_landed"].fillna(0)  * df["red_avg_sig_str_pct"].fillna(0)
+    blue_strike_score = df["blue_avg_sig_str_landed"].fillna(0) * df["blue_avg_sig_str_pct"].fillna(0)
+    feat["sig_str_output_score_dif"] = red_strike_score - blue_strike_score
 
     # ── 4. Style — grappling ──────────────────────────────────────────────────
     feat["td_landed_dif"] = df["red_avg_td_landed"] - df["blue_avg_td_landed"]

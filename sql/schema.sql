@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS features (
     -- Striking differentials
     sig_str_landed_dif      DOUBLE,
     sig_str_pct_dif         DOUBLE,
-    sig_str_absorbed_est    DOUBLE,  -- proxy: opponent sig_str avg when available
+    sig_str_output_score_dif DOUBLE,  -- (red_landed×red_pct) − (blue_landed×blue_pct); effective strike output differential
 
     -- Grappling differentials
     td_landed_dif           DOUBLE,
