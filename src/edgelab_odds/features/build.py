@@ -61,9 +61,6 @@ def _engineer(df: pd.DataFrame) -> pd.DataFrame:
     feat["odds_edge"] = nv["red_imp_prob_novigml"] - nv["blue_imp_prob_novigml"]
 
     # Log-odds ratio — useful feature for tree models.
-    # errstate suppresses the divide-by-zero warning; we then explicitly
-    # replace any resulting ±inf (prob = 0) or NaN with NaN so downstream
-    # models receive clean missing-value indicators rather than ±inf.
     with np.errstate(divide="ignore", invalid="ignore"):
         log_ratio = np.log(
             nv["red_imp_prob_novigml"] / nv["blue_imp_prob_novigml"]
@@ -83,8 +80,6 @@ def _engineer(df: pd.DataFrame) -> pd.DataFrame:
                            - (df["blue_wins"].fillna(0) / blue_total)
     feat["experience_dif"] = red_total - blue_total
 
-    # Compute streak diffs from raw corner columns (consistent with all other
-    # derived differentials; avoids relying on the CSV pre-computed values).
     feat["win_streak_dif"]  = (
         df["red_current_win_streak"].fillna(0) - df["blue_current_win_streak"].fillna(0)
     )
@@ -96,11 +91,6 @@ def _engineer(df: pd.DataFrame) -> pd.DataFrame:
     feat["sig_str_landed_dif"] = df["red_avg_sig_str_landed"] - df["blue_avg_sig_str_landed"]
     feat["sig_str_pct_dif"]    = df["red_avg_sig_str_pct"]    - df["blue_avg_sig_str_pct"]
 
-    # Striking output quality: volume × accuracy per corner, then differential.
-    # This is independent of sig_str_landed_dif (volume only) and sig_str_pct_dif
-    # (accuracy only) — it captures *effective* output (high-volume AND accurate).
-    # Previously this slot held sig_str_absorbed_est = blue_landed - red_landed,
-    # which is just -sig_str_landed_dif (perfectly anti-correlated, redundant).
     red_strike_score  = df["red_avg_sig_str_landed"].fillna(0)  * df["red_avg_sig_str_pct"].fillna(0)
     blue_strike_score = df["blue_avg_sig_str_landed"].fillna(0) * df["blue_avg_sig_str_pct"].fillna(0)
     feat["sig_str_output_score_dif"] = red_strike_score - blue_strike_score
@@ -111,8 +101,6 @@ def _engineer(df: pd.DataFrame) -> pd.DataFrame:
     feat["sub_att_dif"]   = df["red_avg_sub_att"]   - df["blue_avg_sub_att"]
 
     # ── 4. Style — win-method rates ───────────────────────────────────────────
-    # Use np.where so fighters with 0 wins yield NaN instead of 0/1 = 0
-    # (clip(lower=1) would silently turn 0-win fighters into fake 0% rates).
     for corner, col_prefix in [("red", "red"), ("blue", "blue")]:
         wins = df[f"{col_prefix}_wins"].fillna(0)
         dec  = (
@@ -140,7 +128,6 @@ def _engineer(df: pd.DataFrame) -> pd.DataFrame:
     # ── 5. Rankings ───────────────────────────────────────────────────────────
     feat["red_ranked"]  = df["r_match_wc_rank"].notna()
     feat["blue_ranked"] = df["b_match_wc_rank"].notna()
-    # rank_dif: lower number = better rank; Red minus Blue
     feat["rank_dif"] = (
         df["r_match_wc_rank"].fillna(np.nan) - df["b_match_wc_rank"].fillna(np.nan)
     )
@@ -151,18 +138,7 @@ def _engineer(df: pd.DataFrame) -> pd.DataFrame:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def build_features(replace: bool = False) -> int:
-    """Build feature rows from the ``fights`` table and write to ``features``.
-
-    Parameters
-    ----------
-    replace:
-        If ``True``, clear the features table before rebuilding.
-
-    Returns
-    -------
-    int
-        Number of feature rows written.
-    """
+    """Build feature rows from the ``fights`` table and write to ``features``."""
     with conn_ctx() as conn:
         init_db(conn)
 
@@ -207,15 +183,7 @@ def build_features(replace: bool = False) -> int:
 
 
 def load_feature_matrix() -> tuple[pd.DataFrame, pd.Series]:
-    """Load the full feature matrix (X, y) from the database.
-
-    Returns
-    -------
-    X : pd.DataFrame
-        Feature columns only (no fight_id, no label).
-    y : pd.Series
-        Binary labels (1 = Red wins).
-    """
+    """Load the full feature matrix (X, y) from the database."""
     with conn_ctx(read_only=True) as conn:
         df = conn.execute("SELECT * FROM features ORDER BY fight_id").df()
 
@@ -225,7 +193,6 @@ def load_feature_matrix() -> tuple[pd.DataFrame, pd.Series]:
     X = df[feature_cols].copy()
     y = df["label"].astype(int)
 
-    # Fill remaining NaNs with column medians
     X = X.fillna(X.median(numeric_only=True))
 
     log.info("Feature matrix: %d rows × %d cols", X.shape[0], X.shape[1])
